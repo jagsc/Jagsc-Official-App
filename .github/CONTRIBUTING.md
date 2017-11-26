@@ -3,13 +3,14 @@
 - 作業を始める前に自分のRepositoryにForkする
 - 自分のRepositoryのJagsc-Official-Appをcloneする
 - git remote add upstream https://github.com/jagsc/Jagsc-Official-App.git
+- git remote -v コマンドで、originが自分のRepository、upstreamが上記URLになっていることを確認する(違っていたら変更してください)
 
 ## 作業手順
 - JagscのJagsc-Official-Appのdevelopブランチをpullする。(git pull upstream develop)
 - 作業用のブランチを切って移動する(例:'git checkout -b ◯◯')。
 - 空のcommitを作成する(例:'git commit --allow-empty -m "コミットメッセージ"')。なお、コミットメッセージはこれから何をやるかを日本語で書くようにする。
 - ↑で作った空のcommitをpushする(例:'git push -u origin ブランチ名')または('git push -u origin HEAD')。
-- Github上でPullRequestを作成する(内容は後から修正できるので、その時点でわかっていることだけで良いです。テンプレートほぼそのまま残しておいても良い)。
+- Github上でPullRequestを作成する(内容は後から修正できるので、その時点でわかっていることだけで良いです)。
 - 作業用ブランチで作業を開始する。
 - dev-camp-2017-aに作業開始前と終了時、その他気が向いたときにチャットを送るようにする
 - 作業の区切りがついたタイミングでpushし、PullRequestを更新する。
@@ -24,6 +25,7 @@
 - いくらでも時間をかけられるタスクは期限内に終わるようにする。
 - タスクの期限はレビューの時間も含まれていることに注意する。
 - 体調管理をしっかりする。
+- 作業中のPRは後ろに「:WIP」を付ける
 - **何かあったらすぐにdev-camp-2017-aに報告する。**
 
 ## タスクのPullルール
@@ -40,7 +42,7 @@ developブランチは動作可能で開発用ブランチとする。
 どちらのブランチにも、直接commitしてはならない。
 
 開発者はdevelopブランチから派生ブランチを作り、そのブランチ上で開発を行う。  
-開発が完了したら、派生ブランチのPull Request(PR)を作成する。  
+派生ブランチのPull Request(PR)を作成する。  
 レビュワーはレビューが完了したら、PR上で派生ブランチをdevelopへMergeする。  
 Merge済みの使わないブランチは削除する。
 
