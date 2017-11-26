@@ -5,7 +5,7 @@
 - git remote add upstream https://github.com/jagsc/Jagsc-Official-App.git
 
 ## 作業手順
-- 自分のRepositoryのJagsc-Official-Appのdevelopブランチをpullする。(git pull upstream develop)
+- JagscのJagsc-Official-Appのdevelopブランチをpullする。(git pull upstream develop)
 - 作業用のブランチを切って移動する(例:'git checkout -b ◯◯')。
 - 空のcommitを作成する(例:'git commit --allow-empty -m "コミットメッセージ"')。なお、コミットメッセージはこれから何をやるかを日本語で書くようにする。
 - ↑で作った空のcommitをpushする(例:'git push -u origin ブランチ名')または('git push -u origin HEAD')。
