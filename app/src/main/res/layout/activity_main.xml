@@ -7,14 +7,6 @@
     tools:context="org.jagsc.jagsc_official_app.MainActivity">
 
 
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="452dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
     <Button
         android:id="@+id/home"
         android:layout_width="0dp"
@@ -62,5 +54,14 @@
         app:layout_constraintStart_toEndOf="@+id/history"
         app:layout_constraintTop_toBottomOf="@+id/webView"
         app:layout_constraintVertical_bias="1.0" />
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="450dp"
+        android:layout_weight="1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </android.support.constraint.ConstraintLayout>
