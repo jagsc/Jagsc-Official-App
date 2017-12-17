@@ -9,6 +9,13 @@ import android.widget.Button
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // ここで1秒間スリープし、スプラッシュを表示させたままにする。
+        try {
+            Thread.sleep(1000)
+        } catch (e: InterruptedException) {
+        }
+        // スプラッシュthemeを通常themeに変更する
+        setTheme(R.style.AppTheme)
         setContentView(R.layout.activity_main)
 
         val webView = findViewById<WebView>(R.id.webView)
