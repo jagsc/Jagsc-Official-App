@@ -15,7 +15,16 @@ import okhttp3.*
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
-import java.util.ArrayList
+//import jdk.nashorn.internal.runtime.ScriptingFunctions.readLine
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_OK
+import java.net.URL
+import java.nio.charset.StandardCharsets
+import android.widget.Toast
+import java.io.PrintStream
+import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
@@ -221,6 +230,8 @@ class MainActivity : AppCompatActivity() {
 
                         if (debug) {
                             Log.d(TAG, "token is: $auth_token")
+                            var userName = GetUserName(auth_token)
+                            Log.d(TAG, "user name: $userName")
                         }
 
                     } catch (exp: JSONException) {
@@ -239,6 +250,105 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
+    //
+    private fun GetUserName(token: String): String {
+
+        val CONNECTION_TIMEOUT = 30 * 1000
+        val READ_TIMEOUT = 30 * 1000
+
+        val url = URL("https://api.github.com/user? --user username:$token")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.connectTimeout = CONNECTION_TIMEOUT
+        conn.readTimeout = READ_TIMEOUT
+
+        conn.requestMethod = "GET"
+        conn.connect()
+        val statusCode = conn.responseCode
+        val result: StringBuilder? = null
+        if (statusCode == HttpURLConnection.HTTP_OK) {
+            //responseの読み込み
+            val `in` = conn.inputStream
+            val encoding = conn.contentEncoding
+            val inReader = InputStreamReader(`in`, encoding)
+            val bufferedReader = BufferedReader(inReader)
+            var line: String? = null
+            while (line != null) {
+                line = bufferedReader.readLine()
+                result!!.append(line)
+                Log.d(TAG, "$line")
+            }
+            bufferedReader.close()
+            inReader.close()
+            `in`.close()
+        }
+        return result!!.toString()
+        /*
+        var userName = ""
+        try {
+            val url = URL("https://api.github.com/user? --user username:$token")
+            //接続用HttpURLConnectionオブジェクト作成
+            var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                //接続タイムアウトを設定する。
+                connection.connectTimeout = 100000
+                //レスポンスデータ読み取りタイムアウトを設定する。
+                connection.readTimeout = 100000
+                //ヘッダーにAccept-Languageを設定する。
+                connection.setRequestProperty("Accept-Language", Locale.getDefault().toString())
+                //ヘッダーにContent-Typeを設定する
+                connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                // リクエストメソッドの設定
+                connection.requestMethod = "GET"
+                // リダイレクトを自動で許可しない設定
+                connection.instanceFollowRedirects = false
+                // URL接続からデータを読み取る場合はtrue
+                connection.doInput = true
+                // URL接続にデータを書き込む場合はtrue
+                connection.doOutput = false
+                // 接続
+                connection.connect()
+                // レスポンスコードの取得
+                val code = connection.responseCode
+                //Log.d("レスポンスコードは", code + "だよ？");
+                if (code == 204) {
+                    Log.d(TAG, "受信成功")
+                }
+
+                // サーバーからのレスポンスを標準出力へ出す
+                val reader = BufferedReader(InputStreamReader(connection.getInputStream()))
+                var xml = ""
+                var line = ""
+                line = reader.readLine()
+                while (line != null) xml += line
+                Log.d(TAG, "ああああああああああああ$xml")
+                reader.close()
+                */
+                /*
+                if (connection.getResponseCode() === HTTP_OK) {
+                    InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8).use({ isr ->
+                        BufferedReader(isr).use({ reader ->
+                            var line: String
+                            while (reader.readLine() != null) {
+                                line = reader.readLine()
+                                userName = line
+                                Log.d(TAG, line)
+                            }
+                        })
+                    })
+                }
+
+            } finally {
+                if (connection != null) {
+                    connection.disconnect()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return userName
+        */
+    }
+
 
     // Allow web view to go back a page.
     override fun onBackPressed() {
@@ -309,5 +419,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
     }
+
 
 }
