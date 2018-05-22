@@ -180,6 +180,21 @@ class MainActivity : AppCompatActivity() {
         */
     }
 
+    private fun getCsvFromList(scopeList: ArrayList<String>): String {
+
+        var csvString = ""
+
+        for (scope in scopeList) {
+            if (csvString != "") {
+                csvString += ","
+            }
+
+            csvString += scope
+        }
+
+        return csvString
+    }
+
     private fun clearDataBeforeLaunch() {
         val cookieManager = CookieManager.getInstance()
 
@@ -226,12 +241,14 @@ class MainActivity : AppCompatActivity() {
                         val jsonObject = JSONObject(JsonData)
                         val auth_token = jsonObject.getString("access_token")
 
-                        storeToSharedPreference(auth_token)
+                        //storeToSharedPreference(auth_token)
 
                         if (debug) {
                             Log.d(TAG, "token is: $auth_token")
                             var userName = GetUserName(auth_token)
                             Log.d(TAG, "user name: $userName")
+                            var isjagsc = IsJagscMember(auth_token,userName)
+                            Log.d(TAG, "Jagscのメンバーかどうか: $isjagsc")
                         }
 
                     } catch (exp: JSONException) {
@@ -250,51 +267,19 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
-    //
     private fun GetUserName(token: String): String {
-
-        val CONNECTION_TIMEOUT = 30 * 1000
-        val READ_TIMEOUT = 30 * 1000
-
-        val url = URL("https://api.github.com/user? --user username:$token")
-        val conn = url.openConnection() as HttpURLConnection
-        conn.connectTimeout = CONNECTION_TIMEOUT
-        conn.readTimeout = READ_TIMEOUT
-
-        conn.requestMethod = "GET"
-        conn.connect()
-        val statusCode = conn.responseCode
-        val result: StringBuilder? = null
-        if (statusCode == HttpURLConnection.HTTP_OK) {
-            //responseの読み込み
-            val `in` = conn.inputStream
-            val encoding = conn.contentEncoding
-            val inReader = InputStreamReader(`in`, encoding)
-            val bufferedReader = BufferedReader(inReader)
-            var line: String? = null
-            while (line != null) {
-                line = bufferedReader.readLine()
-                result!!.append(line)
-                Log.d(TAG, "$line")
-            }
-            bufferedReader.close()
-            inReader.close()
-            `in`.close()
-        }
-        return result!!.toString()
-        /*
-        var userName = ""
+        var userName = "UNKNOWN"
         try {
-            val url = URL("https://api.github.com/user? --user username:$token")
+            val url = URL("https://api.github.com/user")
             //接続用HttpURLConnectionオブジェクト作成
             var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
             try {
                 //接続タイムアウトを設定する。
-                connection.connectTimeout = 100000
+                connection.connectTimeout = 300000
                 //レスポンスデータ読み取りタイムアウトを設定する。
-                connection.readTimeout = 100000
+                connection.readTimeout = 300000
                 //ヘッダーにAccept-Languageを設定する。
-                connection.setRequestProperty("Accept-Language", Locale.getDefault().toString())
+                connection.setRequestProperty("Authorization", "token $token")
                 //ヘッダーにContent-Typeを設定する
                 connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 // リクエストメソッドの設定
@@ -309,34 +294,22 @@ class MainActivity : AppCompatActivity() {
                 connection.connect()
                 // レスポンスコードの取得
                 val code = connection.responseCode
-                //Log.d("レスポンスコードは", code + "だよ？");
-                if (code == 204) {
+                val codeStr = Integer.toString(code)
+                Log.d("GetUserNameレスポンスコードは", codeStr + "だよ？")
+                if (code == 200) {
                     Log.d(TAG, "受信成功")
                 }
-
                 // サーバーからのレスポンスを標準出力へ出す
-                val reader = BufferedReader(InputStreamReader(connection.getInputStream()))
-                var xml = ""
-                var line = ""
-                line = reader.readLine()
-                while (line != null) xml += line
-                Log.d(TAG, "ああああああああああああ$xml")
-                reader.close()
-                */
-                /*
-                if (connection.getResponseCode() === HTTP_OK) {
-                    InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8).use({ isr ->
-                        BufferedReader(isr).use({ reader ->
-                            var line: String
-                            while (reader.readLine() != null) {
-                                line = reader.readLine()
-                                userName = line
-                                Log.d(TAG, line)
-                            }
-                        })
-                    })
+                val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                var line: String? = null
+                val sb = StringBuilder()
+                for (line in reader.readLines()) {
+                    line?.let { sb.append(line) }
+                    //Log.d(TAG, "Lineの中身は$line")
                 }
-
+                reader.close()
+                val obj = JSONObject(sb.toString())
+                userName = obj.get("login").toString()
             } finally {
                 if (connection != null) {
                     connection.disconnect()
@@ -346,13 +319,72 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
         return userName
-        */
+    }
+    //jagscのメンバーかどうかの確認
+    private fun IsJagscMember(token: String,userName: String): Boolean {
+        var isJagscMember = false
+        try {
+            val url = URL("https://api.github.com/orgs/jagsc/members/$userName")
+            //接続用HttpURLConnectionオブジェクト作成
+            var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                //接続タイムアウトを設定する。
+                connection.connectTimeout = 300000
+                //レスポンスデータ読み取りタイムアウトを設定する。
+                connection.readTimeout = 300000
+                //ヘッダーにAccept-Languageを設定する。
+                connection.setRequestProperty("Authorization", "token $token")
+                //ヘッダーにContent-Typeを設定する
+                connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                // リクエストメソッドの設定
+                connection.requestMethod = "GET"
+                // リダイレクトを自動で許可しない設定
+                connection.instanceFollowRedirects = false
+                // URL接続からデータを読み取る場合はtrue
+                connection.doInput = true
+                // URL接続にデータを書き込む場合はtrue
+                connection.doOutput = false
+                // 接続
+                connection.connect()
+                // レスポンスコードの取得
+                val code = connection.responseCode
+                val codeStr = Integer.toString(code)
+                Log.d("IsJagscのレスポンスコードは", codeStr + "だよ？")
+                if(code==204){
+                    isJagscMember = true
+                }
+            } finally {
+                if (connection != null) {
+                    connection.disconnect()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return isJagscMember
     }
 
 
-    // Allow web view to go back a page.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     override fun onBackPressed() {
-            super.onBackPressed()
+        super.onBackPressed()
     }
 
     private fun storeToSharedPreference(auth_token: String) {
@@ -373,26 +405,6 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "finishThisActivity起動しちゃった・・・")
         Log.d(TAG, "resultCodeは" + resultCode + "です！")
         finish()
-    }
-
-    /**
-     * Generate a comma separated list of scopes out of the
-     *
-     * @param scopeList list of scopes as defined
-     * @return comma separated list of scopes
-     */
-    fun getCsvFromList(scopeList: List<String>): String {
-        var csvString = ""
-
-        for (scope in scopeList) {
-            if (csvString != "") {
-                csvString += ","
-            }
-
-            csvString += scope
-        }
-
-        return csvString
     }
 
 
