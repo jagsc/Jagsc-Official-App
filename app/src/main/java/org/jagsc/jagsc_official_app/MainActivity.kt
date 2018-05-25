@@ -95,21 +95,6 @@ class MainActivity : AppCompatActivity() {
             scopeList.add("read:org")
             scopeAppendToUrl = ""
 
-            //val intent = intent
-            /*
-            if (intent.extras != null) {
-                CLIENT_ID = intent.getStringExtra("id")
-                PACKAGE = intent.getStringExtra("package")
-                CLIENT_SECRET = intent.getStringExtra("secret")
-                ACTIVITY_NAME = intent.getStringExtra("activity")
-                debug = intent.getBooleanExtra("debug", false)
-                isScopeDefined = intent.getBooleanExtra("isScopeDefined", false)
-                clearDataBeforeLaunch = intent.getBooleanExtra("clearData", false)
-            } else {
-                Log.d(TAG, "intent extras null")
-                finish()
-            }*/
-
             var url_load = "$GITHUB_URL?client_id=$CLIENT_ID"
 
             if (isScopeDefined) {
@@ -161,23 +146,6 @@ class MainActivity : AppCompatActivity() {
             }
             webView.loadUrl(url_load)
         })
-
-            /*
-            GithubOauth.Builder()
-                    .withClientId(GITHUB_ID)
-                    .withClientSecret(GITHUB_SECRET)
-                    .withContext(this)
-                    .packageName("org.jagsc.jagsc_official_app")
-                    .nextActivity("org.jagsc.jagsc_official_app.MainActivity")
-                    .debug(true).execute()
-
-            // Sample to read logged in user oauth token
-            val PREFERENCE = "github_prefs"
-            val sharedPreferences = getSharedPreferences(PREFERENCE, 0)
-            val oauthToken = sharedPreferences.getString("oauth_token", null)
-            Log.d("debug", "oauth token for github loged in user is :$oauthToken")
-        })
-        */
     }
 
     private fun getCsvFromList(scopeList: ArrayList<String>): String {
@@ -364,35 +332,8 @@ class MainActivity : AppCompatActivity() {
         return isJagscMember
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     override fun onBackPressed() {
         super.onBackPressed()
-    }
-
-    private fun storeToSharedPreference(auth_token: String) {
-        val prefs = getSharedPreferences("github_prefs", Context.MODE_PRIVATE)
-        val edit = prefs.edit()
-
-        edit.putString("oauth_token", auth_token)
-        edit.apply()
     }
 
     /**
@@ -406,7 +347,6 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "resultCodeは" + resultCode + "です！")
         finish()
     }
-
 
     override fun onStart() {
         super.onStart()
@@ -431,6 +371,4 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
     }
-
-
 }
