@@ -1,7 +1,6 @@
 package org.jagsc.jagsc_official_app
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.os.Build
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -19,11 +18,7 @@ import java.io.IOException
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
-import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
-import java.nio.charset.StandardCharsets
-import android.widget.Toast
-import java.io.PrintStream
 import java.util.*
 
 
@@ -87,20 +82,20 @@ class MainActivity : AppCompatActivity() {
         entry.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/join/")
         }
-        val loginbutton = findViewById<Button>(R.id.loginButton)
-        loginbutton.setOnClickListener(View.OnClickListener {
+        val loginButton = findViewById<Button>(R.id.loginButton)
+        loginButton.setOnClickListener(View.OnClickListener {
 
             scopeList = ArrayList()
             scopeList.add("read:user")
             scopeList.add("read:org")
             scopeAppendToUrl = ""
 
-            var url_load = "$GITHUB_URL?client_id=$CLIENT_ID"
+            var urlLoad = "$GITHUB_URL?client_id=$CLIENT_ID"
 
             if (isScopeDefined) {
                 //scopeList = intent.getStringArrayListExtra("scope_list")
                 scopeAppendToUrl = getCsvFromList(scopeList)
-                url_load += "&scope=$scopeAppendToUrl"
+                urlLoad += "&scope=$scopeAppendToUrl"
             }
 
             if (debug) {
@@ -124,15 +119,15 @@ class MainActivity : AppCompatActivity() {
                         if (!url.contains("?code=")) return false
 
                         CODE = url.substring(url.lastIndexOf("?code=") + 1)
-                        val token_code = CODE.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                        val tokenFetchedIs = token_code[1]
+                        val tokenCode = CODE.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                        val tokenFetchedIs = tokenCode[1]
                         val cleanToken = tokenFetchedIs.split("&".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
                         fetchOauthTokenWithCode(cleanToken[0])
 
                         if (debug) {
                             Log.d(TAG, "code fetched is: $CODE")
-                            Log.d(TAG, "code token: " + token_code[1])
+                            Log.d(TAG, "code token: " + tokenCode[1])
                             Log.d(TAG, "token cleaned is: " + cleanToken[0])
                         }
                     } catch (e: NullPointerException) {
@@ -144,7 +139,7 @@ class MainActivity : AppCompatActivity() {
                     return false
                 }
             }
-            webView.loadUrl(url_load)
+            webView.loadUrl(urlLoad)
         })
     }
 
@@ -183,9 +178,9 @@ class MainActivity : AppCompatActivity() {
         url.addQueryParameter("client_secret", CLIENT_SECRET)
         url.addQueryParameter("code", code)
 
-        val url_oauth = url.build().toString()
+        val urlOauth = url.build().toString()
 
-        val request = Request.Builder().header("Accept", "application/json").url(url_oauth).build()
+        val request = Request.Builder().header("Accept", "application/json").url(urlOauth).build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -199,23 +194,23 @@ class MainActivity : AppCompatActivity() {
             override fun onResponse(call: Call, response: Response) {
 
                 if (response.isSuccessful) {
-                    val JsonData = response.body().string()
+                    val jsonData = response.body().string()
 
                     if (debug) {
-                        Log.d(TAG, "response is: $JsonData")
+                        Log.d(TAG, "response is: $jsonData")
                     }
 
                     try {
-                        val jsonObject = JSONObject(JsonData)
-                        val auth_token = jsonObject.getString("access_token")
+                        val jsonObject = JSONObject(jsonData)
+                        val oauthToken = jsonObject.getString("access_token")
 
-                        //storeToSharedPreference(auth_token)
+                        //storeToSharedPreference(oauthToken)
 
                         if (debug) {
-                            Log.d(TAG, "token is: $auth_token")
-                            var userName = GetUserName(auth_token)
+                            Log.d(TAG, "token is: $oauthToken")
+                            var userName = GetUserName(oauthToken)
                             Log.d(TAG, "user name: $userName")
-                            var isjagsc = IsJagscMember(auth_token,userName)
+                            var isjagsc = IsJagscMember(oauthToken,userName)
                             Log.d(TAG, "Jagscのメンバーかどうか: $isjagsc")
                         }
 
