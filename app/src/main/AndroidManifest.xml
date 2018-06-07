@@ -21,7 +21,7 @@
             </intent-filter>
         </activity>
         <activity android:name="com.hardikgoswami.oauthLibGithub.OauthActivity" />
-        <activity android:name=".OauthActivity"></activity>
+
     </application>
 
 </manifest>
