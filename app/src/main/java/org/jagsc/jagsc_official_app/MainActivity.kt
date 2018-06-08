@@ -1,21 +1,28 @@
 package org.jagsc.jagsc_official_app
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.support.annotation.RequiresApi
 import android.util.Log
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.TextView
 import okhttp3.*
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
-//import jdk.nashorn.internal.runtime.ScriptingFunctions.readLine
 import java.io.BufferedReader
+import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
@@ -43,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private var isScopeDefined = true
     private var debug = true
 
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     @SuppressLint("SetJavaScriptEnabled")
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +65,20 @@ class MainActivity : AppCompatActivity() {
         setTheme(R.style.AppTheme)
         setContentView(R.layout.activity_main)
 
+        //gitのステータスを上に表示する用
+        val mainLayout = findViewById<FrameLayout>(R.id.mainLayout)
+        val statusLayout = findViewById<FrameLayout>(R.id.statusLayout)
+        val webLayout = findViewById<android.support.constraint.ConstraintLayout>(R.id.webLayout)
+        //webLayout.bringToFront()
+       // statusLayout.bringToFront()
+//        statusLayout.translationZ = 1F
+//        statusLayout.elevation = 1.0f
+//        webLayout.translationZ = 20F
+//        webLayout.elevation = 20.0f
+//        statusLayout.invalidate()
+//        webLayout.invalidate()
+//        mainLayout.invalidate()
+
         val webView = findViewById<WebView>(R.id.webView)
         webView.webViewClient = WebViewClient()
         webView.settings.javaScriptEnabled = true
@@ -66,21 +88,25 @@ class MainActivity : AppCompatActivity() {
         val home = findViewById<Button>(R.id.home)
         home.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/")
+            webLayout.bringToFront()
         }
 
         val students = findViewById<Button>(R.id.students)
         students.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/about/")
+            webLayout.bringToFront()
         }
 
         val history = findViewById<Button>(R.id.history)
         history.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/")
+            webLayout.bringToFront()
         }
 
         val entry = findViewById<Button>(R.id.entry)
         entry.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/join/")
+            webLayout.bringToFront()
         }
         val loginButton = findViewById<Button>(R.id.loginButton)
         loginButton.setOnClickListener(View.OnClickListener {
@@ -139,8 +165,10 @@ class MainActivity : AppCompatActivity() {
                     return false
                 }
             }
+
             webView.loadUrl(urlLoad)
         })
+
     }
 
     private fun getCsvFromList(scopeList: ArrayList<String>): String {
@@ -195,7 +223,6 @@ class MainActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     val jsonData = response.body().string()
-
                     if (debug) {
                         Log.d(TAG, "response is: $jsonData")
                     }
@@ -212,6 +239,25 @@ class MainActivity : AppCompatActivity() {
                             Log.d(TAG, "user name: $userName")
                             var isjagsc = IsJagscMember(oauthToken,userName)
                             Log.d(TAG, "Jagscのメンバーかどうか: $isjagsc")
+                            var iconImage = GetImage(URL("https://avatars.githubusercontent.com/$userName"))
+                            var contributionsImage = GetImage(URL("https://grass-graph.moshimo.works/images/$userName.png"))
+                            Handler(mainLooper).postDelayed({
+                                val statusLayouts = findViewById<FrameLayout>(R.id.statusLayout)
+                                statusLayouts.bringToFront()
+                                val gitHubUserName = findViewById<TextView>(R.id.gitHubUserName)
+                                gitHubUserName.text = userName
+                                val isJagscText = findViewById<TextView>(R.id.isJagscText)
+                                if(isjagsc) {
+                                    isJagscText.text = "日本Androidの会学生部メンバー"
+                                }else{
+                                    isJagscText.text = "非所属"
+                                }
+                                val iconImageView = findViewById<ImageView>(R.id.iconImageView)
+                                iconImageView.setImageBitmap(iconImage)
+                                val contributionsImageView = findViewById<ImageView>(R.id.contributionsImageView)
+                                contributionsImageView.setImageBitmap(contributionsImage)
+                                //処理
+                            }, 1000) //1000ms後
                         }
 
                     } catch (exp: JSONException) {
@@ -230,6 +276,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
+    //トークンでユーザーネームの取得
     private fun GetUserName(token: String): String {
         var userName = "UNKNOWN"
         try {
@@ -326,6 +373,48 @@ class MainActivity : AppCompatActivity() {
         }
         return isJagscMember
     }
+    //githubのアイコンイメージ
+    private fun GetImage(url: URL): Bitmap {
+        var bmp = BitmapFactory.decodeResource(resources, R.drawable.identicon)
+        try {
+            //val url = URL("https://avatars.githubusercontent.com/$userName")
+            //接続用HttpURLConnectionオブジェクト作成
+            var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                //接続タイムアウトを設定する。
+                connection.connectTimeout = 300000
+                //レスポンスデータ読み取りタイムアウトを設定する。
+                connection.readTimeout = 300000
+                //ヘッダーにContent-Typeを設定する
+                connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                // リクエストメソッドの設定
+                connection.requestMethod = "GET"
+                // リダイレクトを自動で許可しない設定
+                connection.instanceFollowRedirects = false
+                // URL接続からデータを読み取る場合はtrue
+                connection.doInput = true
+                // URL接続にデータを書き込む場合はtrue
+                connection.doOutput = false
+                // 接続
+                connection.connect()
+                // レスポンスコードの取得
+                val code = connection.responseCode
+                val codeStr = Integer.toString(code)
+                Log.d("GetIconImageのレスポンスコードは", codeStr + "だよ？")
+                var isg = connection.inputStream
+                bmp = BitmapFactory.decodeStream(isg)
+                isg.close()
+            } finally {
+                if (connection != null) {
+                    connection.disconnect()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return bmp
+    }
+
 
     override fun onBackPressed() {
         super.onBackPressed()
