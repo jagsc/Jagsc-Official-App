@@ -18,6 +18,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import okhttp3.*
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
@@ -27,6 +28,7 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
+import kotlin.collections.HashMap
 
 
 class MainActivity : AppCompatActivity() {
@@ -88,24 +90,31 @@ class MainActivity : AppCompatActivity() {
         val home = findViewById<Button>(R.id.home)
         home.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/")
+            webView.bringToFront()
             webLayout.bringToFront()
+
         }
 
         val students = findViewById<Button>(R.id.students)
         students.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/about/")
+            webView.bringToFront()
             webLayout.bringToFront()
+
         }
 
         val history = findViewById<Button>(R.id.history)
         history.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/")
+            webView.bringToFront()
             webLayout.bringToFront()
+
         }
 
         val entry = findViewById<Button>(R.id.entry)
         entry.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/join/")
+            webView.bringToFront()
             webLayout.bringToFront()
         }
         val loginButton = findViewById<Button>(R.id.loginButton)
@@ -241,11 +250,31 @@ class MainActivity : AppCompatActivity() {
                             Log.d(TAG, "Jagscのメンバーかどうか: $isjagsc")
                             var iconImage = GetImage(URL("https://avatars.githubusercontent.com/$userName"))
                             var contributionsImage = GetImage(URL("https://grass-graph.moshimo.works/images/$userName.png"))
+                            var followers = GetFollowers(URL("https://api.github.com/users/$userName"))
+                            var reposPair = GetUserRepos(URL("https://api.github.com/users/$userName/repos"))
+                            var forksCount = reposPair.first.first
+                            var stargazersCount = reposPair.first.second
+                            var trueForkList = reposPair.second
+                            var falseForkList = reposPair.third
+                            var sumPairs = GetContributors(trueForkList,falseForkList,userName)
+                            var sumCommit = sumPairs.first
+                            var sumCode = sumPairs.second
+                            Log.d(TAG ,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                            var githubLatingSum = sumCode.toInt()+sumCommit.toInt()*100+forksCount.toInt()*1000+stargazersCount.toInt()*10000+followers.toInt()*10000
+                            var githubLating= githubLatingSum / 10000
+                            Log.d(TAG ,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+
+
+
                             Handler(mainLooper).postDelayed({
                                 val statusLayouts = findViewById<FrameLayout>(R.id.statusLayout)
                                 statusLayouts.bringToFront()
+                                val webLayout = findViewById<android.support.constraint.ConstraintLayout>(R.id.webLayout)
+                                webLayout.bringToFront()
                                 val gitHubUserName = findViewById<TextView>(R.id.gitHubUserName)
-                                gitHubUserName.text = userName
+                                gitHubUserName.text = "ユーザーネーム："+userName
+                                val gitHubFollowers = findViewById<TextView>(R.id.gitHubFollowers)
+                                gitHubFollowers.text = "フォロワー数："+followers
                                 val isJagscText = findViewById<TextView>(R.id.isJagscText)
                                 if(isjagsc) {
                                     isJagscText.text = "日本Androidの会学生部メンバー"
@@ -256,8 +285,19 @@ class MainActivity : AppCompatActivity() {
                                 iconImageView.setImageBitmap(iconImage)
                                 val contributionsImageView = findViewById<ImageView>(R.id.contributionsImageView)
                                 contributionsImageView.setImageBitmap(contributionsImage)
+                                val gitHubForksCount = findViewById<TextView>(R.id.gitHubForksCount)
+                                gitHubForksCount.text = "フォークされた数合計：" + forksCount
+                                val gitHubStargazersCount = findViewById<TextView>(R.id.gitHubStargazersCount)
+                                gitHubStargazersCount.text = "星の数合計：" + stargazersCount
+                                val gitHubSumCommit = findViewById<TextView>(R.id.gitHubSumCommit)
+                                gitHubSumCommit.text = "コミット数合計：" + sumCommit
+                                val gitHubSumCode = findViewById<TextView>(R.id.gitHubSumCode)
+                                gitHubSumCode.text = "コード記述数合計：" + sumCode
+                                val gitHubSumLating = findViewById<TextView>(R.id.gitHubLate)
+                                gitHubSumLating.text = "GitHubLating：" + githubLating
+
                                 //処理
-                            }, 1000) //1000ms後
+                            }, 3000) //1000ms後
                         }
 
                     } catch (exp: JSONException) {
@@ -305,7 +345,7 @@ class MainActivity : AppCompatActivity() {
                 // レスポンスコードの取得
                 val code = connection.responseCode
                 val codeStr = Integer.toString(code)
-                Log.d("GetUserNameレスポンスコードは", codeStr + "だよ？")
+                Log.d(TAG, "GetUserNameレスポンスコードは"+ codeStr + "だよ？")
                 if (code == 200) {
                     Log.d(TAG, "受信成功")
                 }
@@ -359,7 +399,7 @@ class MainActivity : AppCompatActivity() {
                 // レスポンスコードの取得
                 val code = connection.responseCode
                 val codeStr = Integer.toString(code)
-                Log.d("IsJagscのレスポンスコードは", codeStr + "だよ？")
+                Log.d(TAG, "IsJagscのレスポンスコードは"+ codeStr + "だよ？")
                 if(code==204){
                     isJagscMember = true
                 }
@@ -400,7 +440,7 @@ class MainActivity : AppCompatActivity() {
                 // レスポンスコードの取得
                 val code = connection.responseCode
                 val codeStr = Integer.toString(code)
-                Log.d("GetIconImageのレスポンスコードは", codeStr + "だよ？")
+                Log.d(TAG, "GetImageのレスポンスコードは"+codeStr + "だよ？")
                 var isg = connection.inputStream
                 bmp = BitmapFactory.decodeStream(isg)
                 isg.close()
@@ -413,6 +453,146 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
         return bmp
+    }
+    private fun GetFollowers(url: URL):String{
+        var Followers = ""
+        try {
+            var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                connection.connectTimeout = 300000
+                connection.readTimeout = 300000
+                connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                connection.requestMethod = "GET"
+                connection.instanceFollowRedirects = false
+                connection.doInput = true
+                connection.doOutput = false
+                connection.connect()
+                val code = connection.responseCode
+                val codeStr = Integer.toString(code)
+                Log.d(TAG, "GetFollowersのレスポンスコードは"+codeStr + "だよ？")
+                // サーバーからのレスポンスを標準出力へ出す
+                val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                var line: String? = null
+                val sb = StringBuilder()
+                for (line in reader.readLines()) {
+                    line?.let { sb.append(line) }
+                }
+                reader.close()
+                val obj = JSONObject(sb.toString())
+                Followers = obj.get("followers").toString()
+            } finally {
+                if (connection != null) {
+                    connection.disconnect()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return Followers
+    }
+    private fun GetContributors(trueForkList:MutableList<String>,falseForkList:MutableList<String>,userName:String):Pair<String,String> {
+        var sumCommit = 0
+        var sumCode = 0
+        for(repoName in falseForkList) {
+            val url = URL("https://api.github.com/repos/$userName/$repoName/stats/contributors")
+            try {
+                var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+                try {
+                    connection.connectTimeout = 300000
+                    connection.readTimeout = 300000
+                    connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                    connection.requestMethod = "GET"
+                    connection.instanceFollowRedirects = false
+                    connection.doInput = true
+                    connection.doOutput = false
+                    connection.connect()
+                    val code = connection.responseCode
+                    val codeStr = Integer.toString(code)
+                    Log.d(TAG, "GetContributorsのレスポンスコードは"+codeStr + "でリポは"+repoName)
+                    // サーバーからのレスポンスを標準出力へ出す
+                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                    var line: String? = null
+                    val sb = StringBuilder()
+                    for (line in reader.readLines()) {
+                        line?.let { sb.append(line) }
+                    }
+                    reader.close()
+                    var objArray = JSONArray(sb.toString())
+                    Log.d(TAG,"objArray"+"objArray成功ううううううううう")
+                    var obj = objArray.getJSONObject(0)
+                    Log.d(TAG,"obj"+"obj成功ううううううううう")
+                    //var obj = JSONObject(sb.toString())
+                    sumCommit += obj.get("total") as Int
+                    var weekArray=obj.getJSONArray("weeks")
+                    Log.d(TAG,"weekArray"+"weekArray成功ううううううううう")
+                    for (i in 0..(weekArray.length() - 1)) {
+                        var weekObj = weekArray.getJSONObject(i)
+                        sumCode += weekObj.get("a") as Int
+                    }
+                } finally {
+                    if (connection != null) {
+                        connection.disconnect()
+                    }
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+        return Pair(sumCommit.toString(),sumCode.toString())
+    }
+    private fun GetUserRepos(url: URL):Triple<Pair<String, String>,MutableList<String>,MutableList<String>> {
+        //var isForkMap:MutableMap<String,Boolean> = mutableMapOf()
+        var trueForkList:MutableList<String> = mutableListOf()
+        var falseForkList:MutableList<String> = mutableListOf()
+        var forksCount = 0
+        var stargazersCount = 0
+        var language = ""
+        var languageList:MutableList<String> = mutableListOf()
+
+        try {
+            var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                connection.connectTimeout = 300000
+                connection.readTimeout = 300000
+                connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                connection.requestMethod = "GET"
+                connection.instanceFollowRedirects = false
+                connection.doInput = true
+                connection.doOutput = false
+                connection.connect()
+                val code = connection.responseCode
+                val codeStr = Integer.toString(code)
+                Log.d(TAG, "GetFollowersのレスポンスコードは"+codeStr + "だよ？")
+                // サーバーからのレスポンスを標準出力へ出す
+                val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                var line: String? = null
+                val sb = StringBuilder()
+                for (line in reader.readLines()) {
+                    line?.let { sb.append(line) }
+                }
+                reader.close()
+                var objArray = JSONArray(sb.toString())
+                for( i in 0..(objArray.length() -1)){
+                    var obj = objArray.getJSONObject(i)
+                    if(obj.get("fork") as Boolean){
+                        trueForkList.add(obj.get("name").toString())
+                    }else{
+                        falseForkList.add(obj.get("name").toString())
+                    }
+                    forksCount += obj.get("forks_count") as Int
+                    stargazersCount += obj.get("stargazers_count") as Int
+                    languageList.add(obj.get("language").toString())
+                }
+            } finally {
+                if (connection != null) {
+                    connection.disconnect()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        var pairs = Pair(forksCount.toString(),stargazersCount.toString())
+        return Triple(pairs,trueForkList,falseForkList)
     }
 
 
