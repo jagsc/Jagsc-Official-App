@@ -250,13 +250,13 @@ class MainActivity : AppCompatActivity() {
                             Log.d(TAG, "Jagscのメンバーかどうか: $isjagsc")
                             var iconImage = GetImage(URL("https://avatars.githubusercontent.com/$userName"))
                             var contributionsImage = GetImage(URL("https://grass-graph.moshimo.works/images/$userName.png"))
-                            var followers = GetFollowers(URL("https://api.github.com/users/$userName"))
-                            var reposPair = GetUserRepos(URL("https://api.github.com/users/$userName/repos"))
+                            var followers = GetFollowers(URL("https://api.github.com/users/$userName"),oauthToken)
+                            var reposPair = GetUserRepos(URL("https://api.github.com/users/$userName/repos"),oauthToken)
                             var forksCount = reposPair.first.first
                             var stargazersCount = reposPair.first.second
                             var trueForkList = reposPair.second
                             var falseForkList = reposPair.third
-                            var sumPairs = GetContributors(trueForkList,falseForkList,userName)
+                            var sumPairs = GetContributors(trueForkList,falseForkList,oauthToken,userName)
                             var sumCommit = sumPairs.first
                             var sumCode = sumPairs.second
                             Log.d(TAG ,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
@@ -426,6 +426,7 @@ class MainActivity : AppCompatActivity() {
                 //レスポンスデータ読み取りタイムアウトを設定する。
                 connection.readTimeout = 300000
                 //ヘッダーにContent-Typeを設定する
+
                 connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 // リクエストメソッドの設定
                 connection.requestMethod = "GET"
@@ -454,13 +455,14 @@ class MainActivity : AppCompatActivity() {
         }
         return bmp
     }
-    private fun GetFollowers(url: URL):String{
+    private fun GetFollowers(url: URL,token: String):String{
         var Followers = ""
         try {
             var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
             try {
                 connection.connectTimeout = 300000
                 connection.readTimeout = 300000
+                connection.setRequestProperty("Authorization", "token $token")
                 connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 connection.requestMethod = "GET"
                 connection.instanceFollowRedirects = false
@@ -490,7 +492,7 @@ class MainActivity : AppCompatActivity() {
         }
         return Followers
     }
-    private fun GetContributors(trueForkList:MutableList<String>,falseForkList:MutableList<String>,userName:String):Pair<String,String> {
+    private fun GetContributors(trueForkList:MutableList<String>,falseForkList:MutableList<String>,token:String,userName:String):Pair<String,String> {
         var sumCommit = 0
         var sumCode = 0
         for(repoName in falseForkList) {
@@ -500,6 +502,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     connection.connectTimeout = 300000
                     connection.readTimeout = 300000
+                    connection.setRequestProperty("Authorization", "token $token")
                     connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
                     connection.requestMethod = "GET"
                     connection.instanceFollowRedirects = false
@@ -518,13 +521,13 @@ class MainActivity : AppCompatActivity() {
                     }
                     reader.close()
                     var objArray = JSONArray(sb.toString())
-                    Log.d(TAG,"objArray"+"objArray成功ううううううううう")
+                    Log.d(TAG,"objArray成功ううううううううう")
                     var obj = objArray.getJSONObject(0)
-                    Log.d(TAG,"obj"+"obj成功ううううううううう")
+                    Log.d(TAG,"obj成功ううううううううう")
                     //var obj = JSONObject(sb.toString())
                     sumCommit += obj.get("total") as Int
                     var weekArray=obj.getJSONArray("weeks")
-                    Log.d(TAG,"weekArray"+"weekArray成功ううううううううう")
+                    Log.d(TAG,"weekArray成功ううううううううう")
                     for (i in 0..(weekArray.length() - 1)) {
                         var weekObj = weekArray.getJSONObject(i)
                         sumCode += weekObj.get("a") as Int
@@ -540,7 +543,7 @@ class MainActivity : AppCompatActivity() {
         }
         return Pair(sumCommit.toString(),sumCode.toString())
     }
-    private fun GetUserRepos(url: URL):Triple<Pair<String, String>,MutableList<String>,MutableList<String>> {
+    private fun GetUserRepos(url: URL,token: String):Triple<Pair<String, String>,MutableList<String>,MutableList<String>> {
         //var isForkMap:MutableMap<String,Boolean> = mutableMapOf()
         var trueForkList:MutableList<String> = mutableListOf()
         var falseForkList:MutableList<String> = mutableListOf()
@@ -555,6 +558,7 @@ class MainActivity : AppCompatActivity() {
                 connection.connectTimeout = 300000
                 connection.readTimeout = 300000
                 connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                connection.setRequestProperty("Authorization", "token $token")
                 connection.requestMethod = "GET"
                 connection.instanceFollowRedirects = false
                 connection.doInput = true
