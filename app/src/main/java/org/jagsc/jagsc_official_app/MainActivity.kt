@@ -1,14 +1,53 @@
 package org.jagsc.jagsc_official_app
 
+import android.annotation.SuppressLint
+import android.os.Build
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
+import android.view.View
+import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
+import okhttp3.*
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.IOException
+//import jdk.nashorn.internal.runtime.ScriptingFunctions.readLine
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.*
+
 
 class MainActivity : AppCompatActivity() {
+
+    val GITHUB_URL = "https://github.com/login/oauth/authorize"
+    val GITHUB_OAUTH = "https://github.com/login/oauth/access_token"
+    var CODE = ""
+    var PACKAGE = "Jagsc-Official-App"
+    var CLIENT_ID = "9e676ccb216c3c0f04eb"
+    var CLIENT_SECRET = "675b5e47147ab84e0ca1442be95a47c8f15c8f4f"
+    var ACTIVITY_NAME = "Activity"
+
+    private val TAG = "github-oauth"
+
+    var scopeAppendToUrl = ""
+    var scopeList = arrayListOf<String>()
+
+    private var webiew = null
+
+    private var clearDataBeforeLaunch = false
+    private var isScopeDefined = true
+    private var debug = true
+
+    @SuppressLint("SetJavaScriptEnabled")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         // ここで1秒間スリープし、スプラッシュを表示させたままにする。
         try {
             Thread.sleep(1000)
@@ -20,6 +59,8 @@ class MainActivity : AppCompatActivity() {
 
         val webView = findViewById<WebView>(R.id.webView)
         webView.webViewClient = WebViewClient()
+        webView.settings.javaScriptEnabled = true
+
         webView.loadUrl("http://student.android-group.jp/")
 
         val home = findViewById<Button>(R.id.home)
@@ -41,6 +82,265 @@ class MainActivity : AppCompatActivity() {
         entry.setOnClickListener {
             webView.loadUrl("http://student.android-group.jp/join/")
         }
+        val loginButton = findViewById<Button>(R.id.loginButton)
+        loginButton.setOnClickListener(View.OnClickListener {
+
+            scopeList = ArrayList()
+            scopeList.add("read:user")
+            scopeList.add("read:org")
+            scopeAppendToUrl = ""
+
+            var urlLoad = "$GITHUB_URL?client_id=$CLIENT_ID"
+
+            if (isScopeDefined) {
+                //scopeList = intent.getStringArrayListExtra("scope_list")
+                scopeAppendToUrl = getCsvFromList(scopeList)
+                urlLoad += "&scope=$scopeAppendToUrl"
+            }
+
+            if (debug) {
+                Log.d(TAG, "intent received is " + "\n-client id: " + CLIENT_ID + "\n-secret:" + CLIENT_SECRET + "\n-activity: " + ACTIVITY_NAME + "\n-Package: " + PACKAGE)
+                Log.d(TAG, "onCreate: Scope request are : $scopeAppendToUrl")
+            }
+
+            if (clearDataBeforeLaunch) {
+                clearDataBeforeLaunch()
+            }
+
+            if (webiew == null) {
+            }
+
+            webView.getSettings().javaScriptEnabled = true
+            webView.webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+                    super.shouldOverrideUrlLoading(view, url)
+                    // Try catch to allow in app browsing without crashing.
+                    try {
+                        if (!url.contains("?code=")) return false
+
+                        CODE = url.substring(url.lastIndexOf("?code=") + 1)
+                        val tokenCode = CODE.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                        val tokenFetchedIs = tokenCode[1]
+                        val cleanToken = tokenFetchedIs.split("&".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+
+                        fetchOauthTokenWithCode(cleanToken[0])
+
+                        if (debug) {
+                            Log.d(TAG, "code fetched is: $CODE")
+                            Log.d(TAG, "code token: " + tokenCode[1])
+                            Log.d(TAG, "token cleaned is: " + cleanToken[0])
+                        }
+                    } catch (e: NullPointerException) {
+                        e.printStackTrace()
+                    } catch (e: ArrayIndexOutOfBoundsException) {
+                        e.printStackTrace()
+                    }
+
+                    return false
+                }
+            }
+            webView.loadUrl(urlLoad)
+        })
+    }
+
+    private fun getCsvFromList(scopeList: ArrayList<String>): String {
+
+        var csvString = ""
+
+        for (scope in scopeList) {
+            if (csvString != "") {
+                csvString += ","
+            }
+
+            csvString += scope
+        }
+
+        return csvString
+    }
+
+    private fun clearDataBeforeLaunch() {
+        val cookieManager = CookieManager.getInstance()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cookieManager.removeAllCookies { aBoolean ->
+                // a callback which is executed when the cookies have been removed
+                Log.d(TAG, "Cookie removed: " + aBoolean!!)
+            }
+        } else {
+            cookieManager.removeAllCookie()
+        }
+    }
+
+    private fun fetchOauthTokenWithCode(code: String) {
+        val client = OkHttpClient()
+        val url = HttpUrl.parse(GITHUB_OAUTH).newBuilder()
+        url.addQueryParameter("client_id", CLIENT_ID)
+        url.addQueryParameter("client_secret", CLIENT_SECRET)
+        url.addQueryParameter("code", code)
+
+        val urlOauth = url.build().toString()
+
+        val request = Request.Builder().header("Accept", "application/json").url(urlOauth).build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (debug) {
+                    Log.d(TAG, "IOException: " + e.message)
+                }
+                //finishThisActivity(ResultCode.ERROR)
+            }
+
+            @Throws(IOException::class)
+            override fun onResponse(call: Call, response: Response) {
+
+                if (response.isSuccessful) {
+                    val jsonData = response.body().string()
+
+                    if (debug) {
+                        Log.d(TAG, "response is: $jsonData")
+                    }
+
+                    try {
+                        val jsonObject = JSONObject(jsonData)
+                        val oauthToken = jsonObject.getString("access_token")
+
+                        //storeToSharedPreference(oauthToken)
+
+                        if (debug) {
+                            Log.d(TAG, "token is: $oauthToken")
+                            var userName = GetUserName(oauthToken)
+                            Log.d(TAG, "user name: $userName")
+                            var isjagsc = IsJagscMember(oauthToken,userName)
+                            Log.d(TAG, "Jagscのメンバーかどうか: $isjagsc")
+                        }
+
+                    } catch (exp: JSONException) {
+                        if (debug) {
+                            Log.d(TAG, "json exception: " + exp.message)
+                        }
+                    }
+
+                } else {
+                    if (debug) {
+                        Log.d(TAG, "onResponse: not success: " + response.message())
+                    }
+                }
+
+                //finishThisActivity(ResultCode.SUCCESS)
+            }
+        })
+    }
+    private fun GetUserName(token: String): String {
+        var userName = "UNKNOWN"
+        try {
+            val url = URL("https://api.github.com/user")
+            //接続用HttpURLConnectionオブジェクト作成
+            var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                //接続タイムアウトを設定する。
+                connection.connectTimeout = 300000
+                //レスポンスデータ読み取りタイムアウトを設定する。
+                connection.readTimeout = 300000
+                //ヘッダーにAccept-Languageを設定する。
+                connection.setRequestProperty("Authorization", "token $token")
+                //ヘッダーにContent-Typeを設定する
+                connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                // リクエストメソッドの設定
+                connection.requestMethod = "GET"
+                // リダイレクトを自動で許可しない設定
+                connection.instanceFollowRedirects = false
+                // URL接続からデータを読み取る場合はtrue
+                connection.doInput = true
+                // URL接続にデータを書き込む場合はtrue
+                connection.doOutput = false
+                // 接続
+                connection.connect()
+                // レスポンスコードの取得
+                val code = connection.responseCode
+                val codeStr = Integer.toString(code)
+                Log.d("GetUserNameレスポンスコードは", codeStr + "だよ？")
+                if (code == 200) {
+                    Log.d(TAG, "受信成功")
+                }
+                // サーバーからのレスポンスを標準出力へ出す
+                val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                var line: String? = null
+                val sb = StringBuilder()
+                for (line in reader.readLines()) {
+                    line?.let { sb.append(line) }
+                    //Log.d(TAG, "Lineの中身は$line")
+                }
+                reader.close()
+                val obj = JSONObject(sb.toString())
+                userName = obj.get("login").toString()
+            } finally {
+                if (connection != null) {
+                    connection.disconnect()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return userName
+    }
+    //jagscのメンバーかどうかの確認
+    private fun IsJagscMember(token: String,userName: String): Boolean {
+        var isJagscMember = false
+        try {
+            val url = URL("https://api.github.com/orgs/jagsc/members/$userName")
+            //接続用HttpURLConnectionオブジェクト作成
+            var connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                //接続タイムアウトを設定する。
+                connection.connectTimeout = 300000
+                //レスポンスデータ読み取りタイムアウトを設定する。
+                connection.readTimeout = 300000
+                //ヘッダーにAccept-Languageを設定する。
+                connection.setRequestProperty("Authorization", "token $token")
+                //ヘッダーにContent-Typeを設定する
+                connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                // リクエストメソッドの設定
+                connection.requestMethod = "GET"
+                // リダイレクトを自動で許可しない設定
+                connection.instanceFollowRedirects = false
+                // URL接続からデータを読み取る場合はtrue
+                connection.doInput = true
+                // URL接続にデータを書き込む場合はtrue
+                connection.doOutput = false
+                // 接続
+                connection.connect()
+                // レスポンスコードの取得
+                val code = connection.responseCode
+                val codeStr = Integer.toString(code)
+                Log.d("IsJagscのレスポンスコードは", codeStr + "だよ？")
+                if(code==204){
+                    isJagscMember = true
+                }
+            } finally {
+                if (connection != null) {
+                    connection.disconnect()
+                }
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return isJagscMember
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+    }
+
+    /**
+     * Finish this activity and returns the result
+     *
+     * @param resultCode one of the constants from the class ResultCode
+     */
+    private fun finishThisActivity(resultCode: Int) {
+     setResult(resultCode)
+        Log.d(TAG, "finishThisActivity起動しちゃった・・・")
+        Log.d(TAG, "resultCodeは" + resultCode + "です！")
+        finish()
     }
 
     override fun onStart() {
@@ -66,6 +366,4 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
     }
-
-
 }
